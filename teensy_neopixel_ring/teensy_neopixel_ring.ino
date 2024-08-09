@@ -243,6 +243,8 @@ uint8_t curB;
 
 uint32_t npxColor;
 uint8_t _wheelPos;
+uint8_t thrPos;
+
 int npxExState;
 
 int npx_op_mode_mtrx[NUM_OP_MODES] = {
@@ -409,6 +411,8 @@ void setup() {
   enc_ovr_cmd = 0;
   btnDIN = false;
   npxExState = 0;
+  thrPos = 0;
+
   pinMode(LED_BUILTIN, OUTPUT);
   pinMode(BTN_PIN, INPUT);
   randomSeed(analogRead(0));
@@ -494,51 +498,6 @@ void setup() {
 
   }
 
-
-
-//-----------------------------------------------------------------------------
-void paramSetColorHandler(String nCmd, String nParamName, int& nParam, int nVal) {
-  paramSetHandler(nCmd, nParamName, nParam, nVal, NPX_AMP_MAX, 0);
-  }
-
-//-----------------------------------------------------------------------------
-void paramSetHandler(String nCmd, String nParamName, int& nParam, int nVal, int nUpLim, int nLoLim) {
-  if (inStr == nCmd) {
-    serPrntNL(nCmd + ": set " + nParamName);
-    nParam = nVal;
-
-    if (nParam > nUpLim)
-      nParam = nLoLim;
-    else if (nParam < nLoLim)
-      nParam = nUpLim;
-    }
-  }
-
-//-----------------------------------------------------------------------------
-void paramIncColorHandler(String nCmd, String nParamName, int& nParam, int nInc) {
-  paramIncHandler(nCmd, nParamName, nParam, nInc, NPX_AMP_MAX, 0);
-  }
-
-//-----------------------------------------------------------------------------
-void paramIncColorHandler(String nCmd, String nParamName, float& nParam, int nInc) {
-  paramIncHandler(nCmd, nParamName, nParam, nInc, NPX_AMP_MAX, 0);
-  }
-
-//-----------------------------------------------------------------------------
-void paramIncHandler(String nCmd, String nParamName, int& nParam, int nInc, int nUpLim, int nLoLim) {
-  if (inStr == nCmd) {
-    serPrntNL("i:" + nCmd + ": increment " + nParamName);
-
-    nParam += nInc;
-    serPrntNL("i:" + nCmd + ": nParam " + nParam);
-
-    if (nParam > nUpLim)
-      nParam = nLoLim;
-    else if (nParam < nLoLim)
-      nParam = nUpLim;
-    }
-  }
-
 //-----------------------------------------------------------------------------
 void paramIncHandler(int nIdx, int nInc, int nUpLim, int nLoLim) {
   int _param = eeprom_live[nIdx];
@@ -553,37 +512,6 @@ void paramIncHandler(int nIdx, int nInc, int nUpLim, int nLoLim) {
   eeprom_live[nIdx] = _param;
   }
 
-//-----------------------------------------------------------------------------
-void paramIncHandler(String nCmd, String nParamName, float& nParam, float nInc, float nUpLim, float nLoLim) {
-  if (inStr == nCmd) {
-    serPrntNL("f:" + nCmd + ": increment " + nParamName);
-
-    nParam += nInc;
-    serPrntNL("f:" + nCmd + ": nParam " + nParam);
-
-    if (nParam > nUpLim)
-      nParam = nLoLim;
-    else if (nParam < nLoLim)
-      nParam = nUpLim;
-    }
-  }
-
-
-//=================================================================================================
-void setAllNeoPixels(uint32_t nColor) {
-  // ring.fill(ring.Color(cAll.r, cAll.g, cAll.b), 0, ring.numPixels());
-
-  ring.clear();
-  for (uint16_t i = 0; i < ring.numPixels(); i++) {
-    if (npxEnAry[i])
-      ring.setPixelColor(i, nColor);
-    else
-      ring.setPixelColor(i, 0);
-    }
-
-  ring.show();
-  }
-
 //=================================================================================================
 void setAllNeoPixels(uint32_t nColor[]) {
   // ring.fill(ring.Color(cAll.r, cAll.g, cAll.b), 0, ring.numPixels());
@@ -593,16 +521,16 @@ void setAllNeoPixels(uint32_t nColor[]) {
     if (npxEnAry[i]){
       ring.setPixelColor(i, nColor[i]);
       encNpxl.setPixelColor(0, nColor[0]);
-      }
+    }
     else{
       ring.setPixelColor(i, 0);
       // encNpxl.setPixelColor(0, 0x00FF0000);
 
-      }
     }
+  }
   encNpxl.show();
   ring.show();
-  }
+}
 
 
 //=================================================================================================
@@ -703,8 +631,8 @@ void taskSerOut() {
   Serial.print("(" + npx_mode_strs[npxlMode] + ")");
 
 
-  // _tmpStr += " dEnc:";
-  // _tmpStr += enc_delta;
+  // Serial.print(F(" dEnc:"));
+  // Serial.print(enc_delta);
 
   // _tmpStr += " enc_ovr_cmd:";
   // _tmpStr += enc_ovr_cmd;
@@ -716,14 +644,16 @@ void taskSerOut() {
   // _tmpStr += " _wPos:";
   // _tmpStr += _wheelPos;
 
+  Serial.print(F(" thrPos:"));
+  Serial.print(thrPos);
 
   Serial.print(F(" npx:"));
   Serial.print(npxIdx);
 
 
 
-  // _tmpStr += " EE :max:";
-  // _tmpStr += eeprom_live[EE_REG_AMP_MAX];
+  Serial.print(F(" EE :max:"));
+  Serial.print(eeprom_live[EE_REG_AMP_MAX]);
   // _tmpStr += " min:";
   // _tmpStr += eeprom_live[EE_REG_AMP_MIN];
 
@@ -767,17 +697,17 @@ void taskNpxModeHandler() {
   if (btnDIN == true) {
     if (btnLongPress == true) {
       npxExState = 2;
-      }
+    }
     else {
       npxlMode = NPX_MD_PURPLE_STATIC;
       npxExState = 3;
-      }
     }
+  }
   else {
     npxlMode = npx_op_mode_mtrx[opMd];
     npxExState = 1;
-    }
   }
+}
 
 //=================================================================================================
 void enNpxl(int32_t nIdx) {
@@ -820,19 +750,91 @@ uint32_t genColor(uint8_t nR, uint8_t nG, uint8_t nB) {
   return npxColor;
 }
 
-//=================================================================================================
-void setColorAry(uint8_t nR, uint8_t nG, uint8_t nB) {
-  npxColor = packColor(nR, nG, nB);
-  std::fill(std::begin(npxClrAry), std::end(npxClrAry), npxColor);
+//=============================================================================
+void setColorAry(uint32_t nColor) {
+  std::fill(std::begin(npxClrAry), std::end(npxClrAry), nColor);
 }
 
-//=================================================================================================
+//=============================================================================
+void setColorAry(uint8_t nR, uint8_t nG, uint8_t nB) {
+  npxColor = packColor(nR, nG, nB);
+  setColorAry(npxColor);
+}
+
+
+//=============================================================================
+void doAfterBurner() {
+  uint32_t abColor = 0;
+  static uint8_t tmpR = 0;
+  static uint8_t tmpG = 0;
+  static uint8_t tmpB = 0;
+
+  static uint8_t tmpRr = 0;
+  static uint8_t tmpGr = 0;
+  static uint8_t tmpBr = 0;
+
+  thrPos += enc_delta;
+
+  if (thrPos > 255)
+    thrPos = 255;
+  else if (thrPos < 0)
+    thrPos = 0;
+
+
+  if (thrPos > 250) {
+    tmpR = 200;
+    tmpG = 200;
+    tmpB = 255;
+  }
+  else if (thrPos > 245 && thrPos <= 250) {
+    tmpR = 0;
+    tmpG = 200;
+    tmpB = 255;
+  }
+  else if (thrPos > 240 && thrPos <= 245) {
+    tmpR = 0;
+    tmpG = 150;
+    tmpB = 200;
+  }
+  else if (thrPos > 235 && thrPos <= 240) {
+    tmpR = 255;
+    tmpG = 65;
+    tmpB = 0;
+  }
+  else if (thrPos > 230 && thrPos <= 235) {
+    tmpR = 127;
+    tmpG = 32;
+    tmpB = 0;
+  }
+  else {
+    tmpR = 0;
+    tmpB = 0;
+    tmpG = 0;
+  }
+
+  for (uint16_t i = 0; i < ring.numPixels(); i++) {
+    tmpRr = random(tmpR - 3, tmpR + 3);
+    tmpBr = random(tmpB - 3, tmpB + 3);
+    tmpGr = random(tmpG - 3, tmpG + 3);
+    npxClrAry[i] = packColor(tmpRr, tmpBr, tmpGr);
+  }
+
+}
+
+//=============================================================================
+void enOneNpxl(int32_t nIdx) {
+  std::fill(std::begin(npxEnAry), std::end(npxEnAry), false);
+  enNpxl(nIdx);
+}
+
+//=============================================================================
 void taskNeopixelRing() {
 
   static int _tmpIdx = 0;
   static uint8_t tmpR = 0;
   static uint8_t tmpG = 0;
   static uint8_t tmpB = 0;
+
 
   std::fill(std::begin(npxEnAry), std::end(npxEnAry), true);
 
@@ -861,19 +863,17 @@ void taskNeopixelRing() {
 
       case NPX_MD_WHEEL:
         _wheelPos++;
-        npxColor = Wheel(_wheelPos);
-        std::fill(std::begin(npxClrAry), std::end(npxClrAry), npxColor);
+        // npxColor = Wheel(_wheelPos);
+        // std::fill(std::begin(npxClrAry), std::end(npxClrAry), npxColor);
+        setColorAry(Wheel(_wheelPos));
         break;
 
       case NPX_MD_WHEEL_SINGLE:
-        std::fill(std::begin(npxEnAry), std::end(npxEnAry), false);
         npxIdx--;
-        enNpxl(npxIdx);
+        enOneNpxl(npxIdx);
 
         _wheelPos++;
-        npxColor = Wheel(_wheelPos);
-
-        std::fill(std::begin(npxClrAry), std::end(npxClrAry), npxColor);
+        setColorAry(Wheel(_wheelPos));
         break;
 
       case NPX_MD_RED_SINE:
@@ -953,8 +953,7 @@ void taskNeopixelRing() {
 
 
       case NPX_MD_WHITE_STATIC_SNG:
-        std::fill(std::begin(npxEnAry), std::end(npxEnAry), false);
-        enNpxl(npxIdx);
+        enOneNpxl(npxIdx);
 
         tmpR = eeprom_live[EE_REG_AMP_MAX];
         tmpG = eeprom_live[EE_REG_AMP_MAX];
@@ -963,8 +962,7 @@ void taskNeopixelRing() {
         break;
 
       case NPX_MD_RED_STATIC_SNG:
-        std::fill(std::begin(npxEnAry), std::end(npxEnAry), false);
-        enNpxl(npxIdx);
+        enOneNpxl(npxIdx);
 
         tmpR = eeprom_live[EE_REG_AMP_MAX];
         tmpG = 0;
@@ -973,8 +971,7 @@ void taskNeopixelRing() {
         break;
 
       case NPX_MD_GREEN_STATIC_SNG:
-        std::fill(std::begin(npxEnAry), std::end(npxEnAry), false);
-        enNpxl(npxIdx);
+        enOneNpxl(npxIdx);
 
         tmpR = 0;
         tmpG = eeprom_live[EE_REG_AMP_MIN];
@@ -983,8 +980,7 @@ void taskNeopixelRing() {
         break;
 
       case NPX_MD_BLUE_STATIC_SNG:
-        std::fill(std::begin(npxEnAry), std::end(npxEnAry), false);
-        enNpxl(npxIdx);
+        enOneNpxl(npxIdx);
 
         tmpR = 0;
         tmpG = 0;
@@ -994,8 +990,7 @@ void taskNeopixelRing() {
 
 
       case NPX_MD_ORANGE_STATIC_SNG:
-        std::fill(std::begin(npxEnAry), std::end(npxEnAry), false);
-        enNpxl(npxIdx);
+        enOneNpxl(npxIdx);
 
         tmpR = 255;
         tmpG = 165;
@@ -1004,8 +999,7 @@ void taskNeopixelRing() {
         break;
 
       case NPX_MD_YELLOW_STATIC_SNG:
-        std::fill(std::begin(npxEnAry), std::end(npxEnAry), false);
-        enNpxl(npxIdx);
+        enOneNpxl(npxIdx);
 
         tmpR = eeprom_live[EE_REG_AMP_MAX];
         tmpG = eeprom_live[EE_REG_AMP_MAX];
@@ -1014,8 +1008,7 @@ void taskNeopixelRing() {
         break;
 
       case NPX_MD_PURPLE_STATIC_SNG:
-        std::fill(std::begin(npxEnAry), std::end(npxEnAry), false);
-        enNpxl(npxIdx);
+        enOneNpxl(npxIdx);
 
         tmpR = eeprom_live[EE_REG_AMP_MAX];
         tmpG = 0;
@@ -1034,10 +1027,8 @@ void taskNeopixelRing() {
 
         break;
       case NPX_MD_FIRE_3PX:
-        long randPixel;  //Pixel random number variable
 
         for (uint16_t i = 0; i < ring.numPixels(); i++){
-          // randPixel = random(0, ring.numPixels());
           tmpR = random(200, 255);   //Random RED value
           tmpG = random(0, 65);   //Random GREEN value
           tmpB = 0;
@@ -1046,9 +1037,10 @@ void taskNeopixelRing() {
         }
 
         break;
-        case NPX_MD_AFTERBURNER:
 
-          break;
+      case NPX_MD_AFTERBURNER:
+        doAfterBurner();
+        break;
     }
 
       setAllNeoPixels(npxClrAry);
@@ -1133,6 +1125,7 @@ void handle_button_press() {
       case OP_MD_PATTERN_B:
       case OP_MD_PATTERN_C:
       case OP_MD_PATTERN_D:
+      case OP_MD_PATTERN_E:
         if (btnLongPress) {
           setting_mode = true;
           btnStateR = true;
@@ -1185,6 +1178,7 @@ void handleEncoder() {
       case OP_MD_PATTERN_C:
         npxIdx = knob_to_npx_id();
         break;
+
 
       case OP_MD_SET_NPX_MODE:
         paramIncHandler(EE_REG_NEOPIXEL_MODE, enc_delta, NUM_NPX_MODES, 0);
