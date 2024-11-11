@@ -250,11 +250,11 @@ int npxExState;
 int npx_op_mode_mtrx[NUM_OP_MODES] = {
   NPX_MD_OFF,               //  OP_MD_BOOT
   NPX_MD_OFF,               //  OP_MD_SETUP
-  NPX_MD_ON,                //  OP_MD_ON
-  NPX_MD_BLUE_STATIC_SNG,     //  OP_MD_PATTERN_A
+  NPX_MD_FIRE_3PX,          //  OP_MD_ON
+  NPX_MD_BLUE_STATIC_SNG,  //  OP_MD_PATTERN_A
   NPX_MD_WHEEL,             //  OP_MD_PATTERN_B
   NPX_MD_WHEEL_SINGLE,      //  OP_MD_PATTERN_C
-  NPX_MD_FIRE_3PX,           //  OP_MD_PATTERN_D
+  NPX_MD_RGB_3PX,           //  OP_MD_PATTERN_D
   NPX_MD_AFTERBURNER,           //  OP_MD_PATTERN_E
   NPX_MD_WHEEL_SINGLE,      //  OP_MD_SET_NPX_MO
   NPX_MD_WHITE_STATIC_SNG,  //  OP_MD_SET_MAX
